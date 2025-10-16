@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de ROI Imobiliário - RedattoLAB</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Urbanist:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* Estilos globais para garantir que as fontes sejam carregadas */
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh; 
+        }
+        /* Estilos para o botão (para garantir o efeito hover) */
+        .cta-button:hover {
+            background: #c89d1a !important; 
+            transform: scale(1.05) !important;
+        }
+        .kpi-card-hover:hover {
+            transform: translateY(-5px) !important;
+        }
+        .main-card-hover:hover {
+            transform: scale(1.02) !important;
+        }
+
+        /* Media query para o layout de 4 colunas em telas maiores e adaptação para menores */
+        .input-grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); /* 4 colunas fixas para telas grandes */
+            gap: 20px 30px; /* Aumentando o gap horizontal para garantir mais distância */
+        }
+
+        @media (max-width: 1200px) { /* Ajuste para telas um pouco menores que um desktop grande */
+            .input-grid-container {
+                grid-template-columns: repeat(3, 1fr); /* 3 colunas */
+            }
+        }
+        @media (max-width: 900px) { /* Tablets */
+            .input-grid-container {
+                grid-template-columns: repeat(2, 1fr); /* 2 colunas */
+            }
+        }
+        @media (max-width: 600px) { /* Celulares */
+            .input-grid-container {
+                grid-template-columns: repeat(1, 1fr); /* 1 coluna */
+            }
+        }
+
+        /* Estilos para a tabela de Insight Estratégico */
+        .insight-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            color: #084d6e; /* Cor escura para contrastar com o fundo claro */
+        }
+        .insight-table th, .insight-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #f59e0b; /* Linha de separação */
+            vertical-align: top;
+        }
+        .insight-table th {
+            font-weight: 700;
+            background-color: #fef3c7; /* Fundo amarelo claro para cabeçalho */
+            color: #084d6e;
+        }
+        .insight-table tr:last-child td {
+            border-bottom: none;
+        }
+        .bold-label {
+            font-weight: 700;
+            color: #084d6e;
+            white-space: nowrap; /* Não quebra Meta Otimista */
+        }
+        /* Estilo para a mensagem de erro (oculto por padrão) */
+        .error-message {
+            color: #ef4444;
+            font-weight: 600;
+            margin-top: 15px;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .error-message.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // 1. DESESTRUTURAÇÃO DOS RECURSOS (Importações do React)
+        const { useState, useMemo, useRef } = React;
+        
+        // Substituindo os ícones do Lucide React por um componente simples de SVG inline para estabilidade
+        const IconComponent = ({ name, size = 24, color = 'currentColor', style = {} }) => {
+            // Utilizamos SVGs puros para as tags específicas, garantindo que não haja erro de dependência.
+            switch (name) {
+                case 'Zap':
+                    return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
+                case 'Clock':
+                    return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+                case 'Target':
+                    return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>;
+                case 'MessageSquare':
+                    return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>;
+                default:
+                    // Ícone padrão ou de erro (um círculo)
+                    return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><circle cx="12" cy="12" r="10"/></svg>; 
+            }
+        };
+
+
+        // Estilos de transição para o efeito "bacana"
+        const transitionStyle = { transition: 'all 0.5s ease-in-out', willChange: 'transform, box-shadow' };
+
+        // 2. FUNÇÃO PRINCIPAL
+        function ROICalculadora() {
+            // **REVISADO:** Inicialização com valores vazios/zero
+            const [formData, setFormData] = useState({
+                investimentoMensal: '',
+                cplMedio: '',
+                leadsGerados: '',
+                taxaConversao: '',
+                vendasMensais: '', 
+                ticketMedio: '',
+                margemConstrucao: '', 
+                metaMelhoriaROI: '', 
+            });
+
+            // **NOVO:** Estado para controlar a visibilidade dos resultados
+            const [showResults, setShowResults] = useState(false);
+            const errorMessageRef = useRef(null);
+
+            // URL do WhatsApp com número da RedattoLAB
+            const WHATSAPP_URL = 'https://wa.me/5548999867086?text=Ol%C3%A1%2C%20calculei%20o%20ROI%20da%20minha%20construtora%20na%20calculadora%20e%20preciso%20de%20ajuda%20para%20otimizar%C3%A1-los.';
+            const REDATTOLAB_PHONE = '+55 (48) 99986-7086';
+
+            // Funções de formatação
+            const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+            const formatPercent = (value) => { if (isNaN(value) || value === -0) return '0.0%'; return `${value.toFixed(1)}%`; };
+            const formatNumber = (value) => value.toFixed(1);
+
+            // Lógica de Cálculo Otimizada e Coerente com o Mercado
+            const calculations = useMemo(() => {
+                const {
+                    investimentoMensal, cplMedio, leadsGerados, taxaConversao, vendasMensais, ticketMedio,
+                    margemConstrucao, metaMelhoriaROI,
+                } = formData;
+
+                // **OTIMIZAÇÃO DE ESTABILIDADE:** Converter para float e usar 0 como fallback
+                // Isso garante que mesmo campos vazios ou com erro de digitação não quebrem o cálculo
+                const parseNum = (value) => parseFloat(String(value).replace(',', '.')) || 0;
+                
+                const iMensal = parseNum(investimentoMensal);
+                const cpl = parseNum(cplMedio) || 1; // Evita divisão por zero
+                const leads = parseNum(leadsGerados);
+                const taxaC = parseNum(taxaConversao);
+                const vendas = parseNum(vendasMensais);
+                const ticket = parseNum(ticketMedio);
+                const margem = parseNum(margemConstrucao) / 100 || 0.3; 
+                const metaROI = parseNum(metaMelhoriaROI) / 100 || 0.5;
+                
+                // Cálculos PRINCIPAIS
+                const receitaMensal = vendas * ticket;
+                const lucroBrutoMensal = receitaMensal * margem;
+                const lucroRemanescenteMarketing = lucroBrutoMensal - iMensal; 
+                const roiMensal = iMensal > 0 ? (lucroRemanescenteMarketing / iMensal) * 100 : 0;
+                
+                // CPL ideal (2.5% do ticket, com base no seu know-how)
+                const cplIdeal = ticket * 0.025; 
+                const eficienciaCPL = (cplIdeal / cpl) * 100;
+                const potencialReducaoCPL = iMensal * (1 - (cplIdeal / cpl));
+                
+                // Vendas esperadas (baseado na taxa de conversão imputada)
+                const vendidosEsperados = (leads * (taxaC / 100));
+                const eficienciaVendas = vendidosEsperados > 0 ? (vendas / vendidosEsperados) * 100 : 0;
+                const vendasperdidas = Math.max(0, vendidosEsperados - vendas);
+                const receitaPerdida = vendasperdidas * ticket;
+
+                // Projeção 6 meses
+                const investimentoProjetado6m = iMensal * 6;
+                const lucroProjetado6m = lucroRemanescenteMarketing * 6;
+                
+                // Projeção com OTIMIZAÇÃO (Baseada na meta do lead)
+                const roiMeta = roiMensal * (1 + metaROI);
+                const lucroMensalOtimizado = iMensal * (1 + (roiMeta / 100)); 
+                const lucroOtimizado6m = lucroMensalOtimizado * 6;
+                const ganhoOtimizacao = lucroOtimizado6m - lucroProjetado6m;
+                
+                // LÓGICA DE STATUS REVISADA (Compatível com Imobiliário)
+                const getStatus = (valor, minBom, maxRegular, invertido = false) => {
+                    let bom = invertido ? valor <= minBom : valor >= minBom;
+                    let regular = invertido ? valor >= maxRegular : valor >= maxRegular;
+
+                    if (bom) return { color: '#10b981', label: 'Excelente', bg: '#ecfdf5' };
+                    if (regular) return { color: '#f59e0b', label: 'Regular', bg: '#fffbeb' };
+                    return { color: '#ef4444', label: 'Crítico', bg: '#fef2f2' };
+                };
+
+                return {
+                    receitaMensal,
+                    lucroRemanescenteMarketing,
+                    roiMensal,
+                    cplIdeal,
+                    eficienciaCPL,
+                    potencialReducaoCPL: Math.max(0, potencialReducaoCPL), 
+                    vendidosEsperados,
+                    eficienciaVendas,
+                    vendasperdidas,
+                    receitaPerdida,
+                    investimentoProjetado6m,
+                    lucroProjetado6m,
+                    lucroOtimizado6m,
+                    ganhoOtimizacao,
+                    roiMeta,
+                    
+                    // Aplicação da lógica de status revisada
+                    statusROI: getStatus(roiMensal, 200, 100), 
+                    statusCPL: getStatus(eficienciaCPL, 100, 90), 
+                    statusVendas: getStatus(eficienciaVendas, 90, 75),
+                };
+            }, [formData]);
+
+            // **REVISADO:** Tratamento de valores no input
+            const handleChange = (e) => {
+                const { name, value } = e.target;
+                
+                // Permite a string vazia no estado para o campo ficar visualmente em branco
+                setFormData(prev => ({
+                    ...prev,
+                    [name]: value 
+                }));
+                
+                // Oculta os resultados ao começar a editar um campo
+                if (showResults) {
+                    setShowResults(false);
+                }
+            };
+            
+            // **NOVO:** Função para o botão de geração de resultados
+            const handleGenerateResults = () => {
+                // Validação: Investimento Mensal precisa ser um número maior que zero
+                const iMensal = parseFloat(formData.investimentoMensal);
+                
+                if (iMensal > 0) {
+                    setShowResults(true);
+                    if (errorMessageRef.current) {
+                        errorMessageRef.current.classList.remove('visible');
+                    }
+                } else {
+                    // Mostra a mensagem de erro
+                    if (errorMessageRef.current) {
+                        errorMessageRef.current.classList.add('visible');
+                    }
+                    setShowResults(false);
+                }
+            };
+
+
+            // Componente Reutilizável de Card (com efeito)
+            const KpiCard = ({ title, value, status, description, isCurrency = false, isPercent = false, mainValueColor = status.color }) => (
+                <div 
+                    className="kpi-card-hover"
+                    style={{
+                        ...transitionStyle,
+                        background: status.bg,
+                        borderRadius: '12px',
+                        padding: '25px',
+                        border: `3px solid ${status.color}`,
+                        boxShadow: `0 10px 25px ${status.color.replace(')', ', 0.2)').replace('rgb', 'rgba')}`,
+                        cursor: 'pointer',
+                        minHeight: '200px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = `0 15px 30px ${status.color.replace(')', ', 0.4)').replace('rgb', 'rgba')}` }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 10px 25px ${status.color.replace(')', ', 0.2)').replace('rgb', 'rgba')}` }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
+                        <h3 style={{ fontFamily: 'Urbanist, sans-serif', fontSize: '18px', fontWeight: 600, color: '#084d6e', margin: 0 }}>
+                            {title}
+                        </h3>
+                        <span style={{
+                            background: status.color,
+                            color: 'white',
+                            padding: '6px 14px',
+                            borderRadius: '20px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                        }}>
+                            {status.label}
+                        </span>
+                    </div>
+                    <p style={{ fontSize: '42px', fontWeight: 700, color: mainValueColor, margin: '10px 0' }}>
+                        {isCurrency ? formatCurrency(value) : (isPercent ? formatPercent(value) : formatNumber(value))}
+                    </p>
+                    <p style={{ fontSize: '14px', color: '#666', margin: 0, borderTop: '1px solid #ddd', paddingTop: '10px' }}>
+                        {description}
+                    </p>
+                </div>
+            );
+
+            // Lógica para o CTA dinâmico
+            const getCTAText = () => {
+                const isGoodROI = calculations.roiMensal >= 150; 
+
+                if (isGoodROI) {
+                    return {
+                        title: 'Seu ROI é sólido, mas o próximo nível o aguarda.',
+                        subtitle: `Seu lucro remanescente de ${formatCurrency(calculations.lucroRemanescenteMarketing)}/mês é forte! Agora, o desafio é **escalar o investimento sem perder eficiência** e garantir os +${formatCurrency(calculations.ganhoOtimizacao)} de lucro extra projetados em 6 meses.`,
+                        iconColor: '#10b981',
+                    };
+                } else {
+                    return {
+                        title: 'Alerta: há lucro sendo deixado na mesa.',
+                        priority: true,
+                        subtitle: `Com um ROI de ${formatPercent(calculations.roiMensal)} e um potencial de ganho de até +${formatCurrency(calculations.ganhoOtimizacao)} em 6 meses, sua estratégia precisa de um ajuste urgente. Estamos perdendo vendas (${formatCurrency(calculations.receitaPerdida)}/mês) ou pagando muito caro pelo lead.`,
+                        iconColor: '#ef4444',
+                    };
+                }
+            };
+
+            const ctaContent = getCTAText();
+
+            return (
+                <div style={{
+                    background: 'linear-gradient(180deg, #000000 0%, #084d6e 100%)',
+                    minHeight: '100vh',
+                    padding: '40px 20px',
+                    fontFamily: 'Inter, sans-serif',
+                    color: '#ffffff',
+                }}>
+                    <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+                        {/* Header */}
+                        <div style={{ textAlign: 'center', marginBottom: '50px' }}>
+                            {/* LOGO REDATTOLAB */}
+                            <img 
+                                src="https://redattolab.com.br/wp-content/uploads/2025/09/RedattoLAB-400-x-150-px.png" 
+                                alt="RedattoLAB Logo" 
+                                style={{ maxWidth: '300px', height: 'auto', marginBottom: '20px' }} 
+                            />
+                            {/* REVISADO: Capitalização */}
+                            <h1 style={{ fontFamily: 'Urbanist, sans-serif', fontSize: '42px', fontWeight: 700, color: '#daa520', marginBottom: '10px' }}>
+                                Calculadora de ROI imobiliário
+                            </h1>
+                            {/* REVISADO: Capitalização */}
+                            <p style={{ color: '#ffffff', fontSize: '16px', opacity: 0.9 }}>
+                                Diagnóstico e projeção estratégica para construtoras e incorporadoras
+                            </p>
+                        </div>
+
+                        {/* Input Form */}
+                        <div style={{ background: '#084d6e', borderRadius: '16px', padding: '30px', marginBottom: '40px', border: '2px solid #daa520', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
+                            {/* REVISADO: Capitalização */}
+                            <h2 style={{ fontFamily: 'Urbanist, sans-serif', fontSize: '24px', fontWeight: 600, color: '#daa520', marginBottom: '25px' }}>
+                                Seus dados atuais e metas
+                            </h2>
+
+                            {/* APLICANDO O GRID DE 4 COLUNAS E GAP AUMENTADO */}
+                            <div className="input-grid-container">
+                                {[
+                                    { label: 'Investimento mensal (R$)', name: 'investimentoMensal', type: 'currency' },
+                                    { label: 'CPL médio (R$)', name: 'cplMedio', type: 'currency' },
+                                    { label: 'Leads gerados/mês', name: 'leadsGerados', type: 'number' },
+                                    { label: 'Taxa de conversão (%)', name: 'taxaConversao', type: 'percent' },
+                                    { label: 'Vendas geradas/mês', name: 'vendasMensais', type: 'number' },
+                                    { label: 'Ticket médio (R$)', name: 'ticketMedio', type: 'currency' },
+                                    { label: 'Margem de construção (%)', name: 'margemConstrucao', type: 'percent' },
+                                    { label: 'Meta de melhoria do ROI (%) - 6m', name: 'metaMelhoriaROI', type: 'percent', highlight: true },
+                                ].map(field => (
+                                    <div key={field.name}>
+                                        <label style={{ display: 'block', color: field.highlight ? '#10b981' : '#daa520', fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>
+                                            {field.label}
+                                        </label>
+                                        <input
+                                            type="number"
+                                            name={field.name}
+                                            value={formData[field.name]} 
+                                            onChange={handleChange}
+                                            style={{
+                                                ...transitionStyle,
+                                                width: '100%', 
+                                                maxWidth: '220px', 
+                                                padding: '12px 15px',
+                                                border: `2px solid ${field.highlight ? '#10b981' : '#daa520'}`,
+                                                borderRadius: '8px', background: '#ffffff', fontSize: '16px',
+                                                fontFamily: 'Inter, sans-serif', color: '#084d6e',
+                                                boxShadow: field.highlight ? '0 0 10px rgba(16, 185, 129, 0.5)' : 'none',
+                                                boxSizing: 'border-box',
+                                            }}
+                                            onFocus={(e) => e.currentTarget.style.borderColor = '#ffffff'}
+                                            onBlur={(e) => e.currentTarget.style.borderColor = field.highlight ? '#10b981' : '#daa520'}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                            
+                            {/* **NOVO:** BOTÃO GERAR RESULTADOS */}
+                            <div style={{ textAlign: 'center', marginTop: '30px' }}>
+                                <button
+                                    onClick={handleGenerateResults}
+                                    style={{
+                                        ...transitionStyle,
+                                        display: 'inline-flex', alignItems: 'center', gap: '10px',
+                                        padding: '15px 40px', borderRadius: '8px', 
+                                        background: '#daa520', color: '#084d6e',
+                                        textDecoration: 'none', fontSize: '18px', fontWeight: 700,
+                                        border: 'none', cursor: 'pointer',
+                                    }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#c89d1a'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = '#daa520'; }}
+                                >
+                                    <IconComponent name="Zap" size={20} /> GERAR RESULTADOS E DIAGNÓSTICO
+                                </button>
+                                
+                                <p 
+                                    ref={errorMessageRef} 
+                                    className="error-message" 
+                                    style={{ transition: 'opacity 0.5s ease' }}
+                                >
+                                    ⚠ Por favor, preencha o campo "Investimento Mensal (R$)" com um valor maior que zero.
+                                </p>
+                            </div>
+                            
+                        </div>
+                        
+                        {/* **NOVO:** SEÇÃO DE RESULTADOS CONDICIONAL */}
+                        {showResults && (
+                            <React.Fragment>
+                                
+                                {/* KPI Highlights */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '25px', marginBottom: '40px' }}>
+                                    
+                                    <KpiCard
+                                        title="ROI mensal de marketing"
+                                        value={calculations.roiMensal}
+                                        status={calculations.statusROI}
+                                        isPercent
+                                        description={
+                                            calculations.roiMensal > 0 
+                                            ? `Lucro remanescente: ${formatCurrency(calculations.lucroRemanescenteMarketing)}/mês. Seu ROI é de ${formatNumber(calculations.roiMensal / 100 + 1)}x o investimento.` 
+                                            : 'Seu ROI está negativo ou neutro. Ajustes urgentes são necessários.'
+                                        }
+                                        mainValueColor={calculations.statusROI.color}
+                                    />
+
+                                    <KpiCard
+                                        title="Eficiência de CPL"
+                                        value={calculations.eficienciaCPL}
+                                        status={calculations.statusCPL}
+                                        isPercent
+                                        description={
+                                            calculations.eficienciaCPL >= 100 
+                                            ? `CPL ideal: ${formatCurrency(calculations.cplIdeal)}. Ótimo! ` 
+                                            : `Sua CPL (${formatCurrency(parseFloat(formData.cplMedio) || 0)}) está acima da ideal (${formatCurrency(calculations.cplIdeal)}). Potencial de economia: ${formatCurrency(calculations.potencialReducaoCPL)}/mês.`
+                                        }
+                                        mainValueColor={calculations.statusCPL.color}
+                                    />
+
+                                    <KpiCard
+                                        title="Eficiência de conversão"
+                                        value={calculations.eficienciaVendas}
+                                        status={calculations.statusVendas}
+                                        isPercent
+                                        description={
+                                            calculations.vendasperdidas > 0 
+                                            ? `Você está perdendo ${formatNumber(calculations.vendasperdidas)} vendas que gerariam ${formatCurrency(calculations.receitaPerdida)}/mês. Concentre-se no seu funil de vendas.` 
+                                            : `Conversão acima do esperado! Mantendo ${formatNumber(calculations.vendidosEsperados)} vendas esperadas.`
+                                        }
+                                        mainValueColor={calculations.statusVendas.color}
+                                    />
+                                    
+                                    {/* Lucro Remanescente Card com estilo único */}
+                                    <div 
+                                        className="main-card-hover"
+                                        style={{
+                                            ...transitionStyle,
+                                            background: 'linear-gradient(135deg, #daa520 0%, #c89d1a 100%)',
+                                            borderRadius: '12px', padding: '25px', border: 'none',
+                                            boxShadow: '0 10px 25px rgba(218, 165, 32, 0.4)',
+                                            cursor: 'default',
+                                            display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                    >
+                                        <h3 style={{ fontFamily: 'Urbanist, sans-serif', fontSize: '18px', fontWeight: 600, color: '#084d6e', margin: '0 0 15px 0' }}>
+                                            **Lucro remanescente mensal** (após marketing digital)
+                                        </h3>
+                                        <p style={{ fontSize: '36px', fontWeight: 700, color: '#084d6e', margin: '5px 0' }}>
+                                            {formatCurrency(calculations.lucroRemanescenteMarketing)}
+                                        </p>
+                                        <p style={{ fontSize: '12px', color: '#084d6e', opacity: 0.9, margin: '8px 0 0 0', fontWeight: 500, borderTop: '1px solid rgba(8, 77, 110, 0.3)', paddingTop: '10px' }}>
+                                            Receita total: {formatCurrency(calculations.receitaMensal)} (considerando margem bruta: {parseFloat(formData.margemConstrucao) || 0}%)
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* 6 Month Projection & Optimization */}
+                                <div style={{ background: '#084d6e', borderRadius: '16px', padding: '30px', marginBottom: '40px', border: '2px solid #daa520', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px' }}>
+                                        <IconComponent name="Clock" size={28} color="#daa520" />
+                                        <h2 style={{ fontFamily: 'Urbanist, sans-serif', fontSize: '24px', fontWeight: 600, color: '#daa520', margin: 0 }}>
+                                            Projeção de lucro em 6 meses
+                                        </h2>
+                                        <span style={{ color: '#10b981', fontWeight: 700, fontSize: '18px', marginLeft: 'auto' }}>
+                                            Meta: melhorar ROI em {formatPercent(parseFloat(formData.metaMelhoriaROI) || 0)} (ROI alvo: {formatPercent(calculations.roiMeta)})
+                                        </span>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                                        {/* Cenário Atual */}
+                                        <div style={{ ...transitionStyle, background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '24px', border: '1px solid rgba(218, 165, 32, 0.3)' }}>
+                                            <p style={{ color: '#ffffff', opacity: 0.8, fontSize: '13px', margin: '0 0 10px 0', fontWeight: 600 }}>Cenário atual (6 meses)</p>
+                                            <p style={{ fontSize: '24px', fontWeight: 700, color: '#daa520', margin: '10px 0' }}>{formatCurrency(calculations.lucroProjetado6m)}</p>
+                                            <p style={{ color: '#ffffff', opacity: 0.7, fontSize: '12px', margin: 0 }}>Com investimento total de {formatCurrency(calculations.investimentoProjetado6m)}.</p>
+                                        </div>
+
+                                        {/* Cenário Otimizado */}
+                                        <div style={{ 
+                                            ...transitionStyle, 
+                                            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(218, 165, 32, 0.15) 100%)',
+                                            borderRadius: '12px', padding: '24px', border: '2px solid #10b981' 
+                                        }}>
+                                            <p style={{ color: '#10b981', fontSize: '13px', margin: '0 0 10px 0', fontWeight: 700 }}>Cenário otimizado (meta atingida)</p>
+                                            <p style={{ fontSize: '24px', fontWeight: 700, color: '#10b981', margin: '10px 0' }}>{formatCurrency(calculations.lucroOtimizado6m)}</p>
+                                            <p style={{ color: '#ffffff', opacity: 0.7, fontSize: '12px', margin: 0 }}>Lucro potencial ao atingir o ROI de {formatPercent(calculations.roiMeta)}.</p>
+                                        </div>
+
+                                        {/* Ganho Total */}
+                                        <div style={{ ...transitionStyle, background: 'rgba(218, 165, 32, 0.15)', borderRadius: '12px', padding: '24px', border: '2px solid #daa520', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+                                            <p style={{ color: '#daa520', fontSize: '13px', margin: '0 0 10px 0', fontWeight: 700 }}>Ganho adicional em 6 meses</p>
+                                            <p style={{ fontSize: '32px', fontWeight: 700, color: '#daa520', margin: '10px 0' }}>
+                                                +{formatCurrency(calculations.ganhoOtimizacao)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {/* **INSIGHT ESTRATÉGICO DA REDATTOLAB** */}
+                                <div style={{
+                                    background: '#fffbeb', 
+                                    borderRadius: '16px',
+                                    padding: '30px',
+                                    marginBottom: '40px',
+                                    border: '2px solid #f59e0b', 
+                                    boxShadow: '0 10px 20px rgba(0,0,0,0.1)'
+                                }}>
+                                    <h3 style={{ fontFamily: 'Urbanist, sans-serif', fontSize: '22px', fontWeight: 700, color: '#f59e0b', margin: '0 0 15px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <IconComponent name="Target" size={24} color="#f59e0b" />
+                                        Insight estratégico RedattoLAB: metas de ROI em 6 meses
+                                    </h3>
+                                    <p style={{ fontSize: '15px', color: '#084d6e', margin: '0 0 20px 0', lineHeight: 1.5 }}>
+                                        A melhoria no ROI pode ser decomposta em dois pilares: **Redução de custo** e **aumento de lucro**. Abaixo, as metas adequadas para o mercado imobiliário:
+                                    </p>
+                                    
+                                    <table className="insight-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Cenário</th>
+                                                <th>% de melhoria</th>
+                                                <th>Justificativa de mercado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td className="bold-label">Meta otimista / agressiva</td>
+                                                <td>100%</td>
+                                                <td>Ideal para empresas que estão atualmente com ROI **baixo (abaixo de 100%)** ou **médio (entre 100%-150%)** e têm grandes perdas de *leads* por funil. Focar em reduzir o CPL em 20% e aumentar a conversão de *leads* em 30% pode facilmente dobrar o ROI em 6 meses.</td>
+                                            </tr>
+                                            <tr>
+                                                <td className="bold-label">Meta realista / sólida</td>
+                                                <td>50%</td>
+                                                <td>Adequada para empresas que já possuem um ROI **saudável (acima de 150%)**. Atingir esta meta significa manter a eficiência enquanto se aumenta o volume de investimento e de *leads*, o que é mais desafiador. Foca em ganhos marginais e escalabilidade segura.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <p style={{ fontSize: '13px', color: '#084d6e', opacity: 0.8, marginTop: '20px' }}>
+                                        *Sua meta de {formatPercent(parseFloat(formData.metaMelhoriaROI) || 0)} está alinhada com as práticas de otimização no setor.*
+                                    </p>
+                                </div>
+                                {/* FIM INSIGHT ESTRATÉGICO */}
+
+                                {/* CTA - CALL TO ACTION (REDATTOLAB LEAD MAGNET) */}
+                                <div style={{ 
+                                    background: ctaContent.iconColor === '#10b981' ? 'linear-gradient(90deg, #084d6e 50%, #10b981 100%)' : 'linear-gradient(90deg, #084d6e 50%, #ef4444 100%)',
+                                    borderRadius: '16px', padding: '40px 30px', marginBottom: '40px', 
+                                    border: `3px solid ${ctaContent.iconColor}`, textAlign: 'center',
+                                    boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
+                                }}>
+                                    <IconComponent name="MessageSquare" size={36} color={ctaContent.iconColor} style={{ marginBottom: '15px' }}/>
+                                    <h2 style={{ fontFamily: 'Urbanist, sans-serif', fontSize: '28px', fontWeight: 700, color: ctaContent.iconColor, margin: '0 0 10px 0' }}>
+                                        {ctaContent.title}
+                                    </h2>
+                                    <p style={{ color: '#ffffff', fontSize: '18px', opacity: 0.9, maxWidth: '800px', margin: '0 auto 30px auto' }}>
+                                        {ctaContent.subtitle}
+                                    </p>
+
+                                    <a 
+                                        href={WHATSAPP_URL}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="cta-button"
+                                        style={{
+                                            ...transitionStyle,
+                                            display: 'inline-flex', alignItems: 'center', gap: '10px',
+                                            padding: '15px 30px', borderRadius: '8px', 
+                                            background: '#daa520', color: '#084d6e',
+                                            textDecoration: 'none', fontSize: '18px', fontWeight: 700,
+                                            boxShadow: '0 8px 15px rgba(218, 165, 32, 0.5)',
+                                            border: '2px solid #daa520'
+                                        }}
+                                    >
+                                        <IconComponent name="Zap" size={20} /> OTIMIZE MEU ROI COM A REDATTOLAB
+                                    </a>
+                                    <p style={{ color: '#ffffff', opacity: 0.7, fontSize: '12px', marginTop: '15px' }}>
+                                        Ou ligue: {REDATTOLAB_PHONE}
+                                    </p>
+                                </div>
+                                {/* FIM CTA */}
+
+                                {/* Action Checklist */}
+                                <div style={{ background: '#084d6e', borderRadius: '16px', padding: '30px', border: '2px solid #daa520', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px' }}>
+                                        <IconComponent name="Target" size={28} color="#daa520" />
+                                        <h2 style={{ fontFamily: 'Urbanist, sans-serif', fontSize: '24px', fontWeight: 600, color: '#daa520', margin: 0 }}>
+                                            Plano de ação para {formatPercent(parseFloat(formData.metaMelhoriaROI) || 0)} de melhoria no ROI
+                                        </h2>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gap: '15px' }}>
+                                        {[
+                                            {
+                                                title: 'Otimização de CPL',
+                                                description: calculations.eficienciaCPL < 100 
+                                                    ? `**Ação urgente:** reduzir CPL de ${formatCurrency(parseFloat(formData.cplMedio) || 0)} para a meta de ${formatCurrency(calculations.cplIdeal)} focando em segmentação e qualidade do lead. **Prioridade máxima.**`
+                                                    : '**Manutenção:** seu CPL está eficiente. Foco agora é escalar investimento mantendo o custo.'
+                                                ,
+                                                priority: calculations.eficienciaCPL < 100,
+                                                icon: calculations.eficienciaCPL < 90 ? '🔴' : '🟢'
+                                            },
+                                            {
+                                                title: 'Melhoria na conversão (funil)',
+                                                description: calculations.eficienciaVendas < 90
+                                                    ? `**Insight:** seu funil está perdendo ${formatNumber(calculations.vendasperdidas)} vendas (${formatCurrency(calculations.receitaPerdida)}/mês). Invista em treinamento de corretores, automação de follow-up e qualificação de leads (MQL/SQL).`
+                                                    : '**Sólido:** sua conversão está ótima. Revise a taxa de conversão para identificar gargalos menores.'
+                                                ,
+                                                priority: calculations.eficienciaVendas < 90,
+                                                icon: calculations.eficienciaVendas < 75 ? '🔴' : '🟢'
+                                            },
+                                            {
+                                                title: 'Revisão da distribuição de verba',
+                                                description: `A distribuição 35% Google / 35% Facebook / 30% Outros é padrão, mas o ROI pode ser otimizado concentrando mais verba nos canais com melhor **Custo por Venda (CPV)**, e não apenas CPL.`,
+                                                priority: calculations.roiMensal < 150,
+                                                icon: '🔵'
+                                            },
+                                            {
+                                                title: 'Aumento do ticket médio/vendas',
+                                                description: `Para atingir sua meta de ROI de ${formatPercent(calculations.roiMeta)}, você precisará de mais vendas (e/ou) um ticket médio maior. Estratégia: Upsell/Cross-sell de unidades ou lançamentos de maior valor.`,
+                                                priority: calculations.ganhoOtimizacao > 0,
+                                                icon: '🔵'
+                                            }
+                                        ].map((item, idx) => (
+                                            <div 
+                                                key={idx} 
+                                                style={{
+                                                    ...transitionStyle,
+                                                    background: item.priority ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)',
+                                                    border: `2px solid ${item.priority ? '#ef4444' : '#10b981'}`,
+                                                    borderRadius: '12px', padding: '18px', display: 'flex', gap: '16px',
+                                                    boxShadow: item.priority ? '0 5px 15px rgba(239, 68, 68, 0.2)' : 'none'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = item.priority ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = item.priority ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)'}
+                                            >
+                                                <span style={{ fontSize: '24px', minWidth: '30px', lineHeight: 1 }}>{item.icon}</span>
+                                                <div style={{ flex: 1 }}>
+                                                    <p style={{ color: '#daa520', fontWeight: 700, margin: '0 0 6px 0', fontSize: '15px', fontFamily: 'Urbanist, sans-serif' }}>
+                                                        {item.title}
+                                                    </p>
+                                                    <p style={{ color: '#ffffff', opacity: 0.8, margin: 0, fontSize: '14px' }}>
+                                                        {item.description}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Footer Insights */}
+                                <div style={{ marginTop: '40px', textAlign: 'center', color: '#daa520', fontSize: '13px', opacity: 0.9 }}>
+                                    <p style={{ fontFamily: 'Urbanist, sans-serif' }}>A estratégia de marketing imobiliário exige foco em CPL ideal (2-3% do ticket) e otimização do funil de vendas (2-5% conversão).</p>
+                                </div>
+                            </React.Fragment>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+        
+        // 3. INICIALIZAÇÃO DO REACT
+        const rootElement = document.getElementById("root"); 
+        const root = ReactDOM.createRoot(rootElement);
+
+        // Renderiza o componente na tela
+        root.render(
+            <ROICalculadora />
+        );
+
+    </script>
+</body>
+</html>
