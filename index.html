@@ -32,23 +32,23 @@
         /* Media query para o layout de 4 colunas em telas maiores e adaptação para menores */
         .input-grid-container {
             display: grid;
-            grid-template-columns: repeat(4, 1fr); /* 4 colunas fixas para telas grandes */
-            gap: 20px 30px; /* Aumentando o gap horizontal para garantir mais distância */
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px 30px;
         }
 
-        @media (max-width: 1200px) { /* Ajuste para telas um pouco menores que um desktop grande */
+        @media (max-width: 1200px) {
             .input-grid-container {
-                grid-template-columns: repeat(3, 1fr); /* 3 colunas */
+                grid-template-columns: repeat(3, 1fr);
             }
         }
-        @media (max-width: 900px) { /* Tablets */
+        @media (max-width: 900px) {
             .input-grid-container {
-                grid-template-columns: repeat(2, 1fr); /* 2 colunas */
+                grid-template-columns: repeat(2, 1fr);
             }
         }
-        @media (max-width: 600px) { /* Celulares */
+        @media (max-width: 600px) {
             .input-grid-container {
-                grid-template-columns: repeat(1, 1fr); /* 1 coluna */
+                grid-template-columns: repeat(1, 1fr);
             }
         }
 
@@ -57,17 +57,17 @@
             width: 100%;
             border-collapse: collapse;
             font-size: 14px;
-            color: #084d6e; /* Cor escura para contrastar com o fundo claro */
+            color: #084d6e;
         }
         .insight-table th, .insight-table td {
             padding: 12px 15px;
             text-align: left;
-            border-bottom: 1px solid #f59e0b; /* Linha de separação */
+            border-bottom: 1px solid #f59e0b;
             vertical-align: top;
         }
         .insight-table th {
             font-weight: 700;
-            background-color: #fef3c7; /* Fundo amarelo claro para cabeçalho */
+            background-color: #fef3c7;
             color: #084d6e;
         }
         .insight-table tr:last-child td {
@@ -76,7 +76,7 @@
         .bold-label {
             font-weight: 700;
             color: #084d6e;
-            white-space: nowrap; /* Não quebra Meta Otimista */
+            white-space: nowrap;
         }
         /* Estilo para a mensagem de erro (oculto por padrão) */
         .error-message {
@@ -90,18 +90,55 @@
         .error-message.visible {
             opacity: 1;
         }
+
+        /* CORREÇÃO: Responsividade da tabela de Insight Estratégico para MOBILE */
+        @media (max-width: 768px) {
+            .insight-table {
+                font-size: 12px;
+            }
+            
+            .insight-table thead {
+                display: none;
+            }
+            
+            .insight-table tbody tr {
+                margin-bottom: 20px;
+                display: block;
+                border: 2px solid #f59e0b;
+                border-radius: 8px;
+                padding: 15px;
+                background: #ffffff;
+            }
+            
+            .insight-table td {
+                display: block;
+                width: 100%;
+                border-bottom: none;
+                padding: 8px 0;
+                text-align: left;
+            }
+            
+            .insight-table td:before {
+                content: attr(data-label);
+                display: block;
+                font-weight: 700;
+                color: #f59e0b;
+                margin-bottom: 5px;
+            }
+            
+            .bold-label {
+                white-space: normal !important;
+            }
+        }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        // 1. DESESTRUTURAÇÃO DOS RECURSOS (Importações do React)
         const { useState, useMemo, useRef } = React;
         
-        // Substituindo os ícones do Lucide React por um componente simples de SVG inline para estabilidade
         const IconComponent = ({ name, size = 24, color = 'currentColor', style = {} }) => {
-            // Utilizamos SVGs puros para as tags específicas, garantindo que não haja erro de dependência.
             switch (name) {
                 case 'Zap':
                     return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
@@ -112,18 +149,13 @@
                 case 'MessageSquare':
                     return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>;
                 default:
-                    // Ícone padrão ou de erro (um círculo)
                     return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><circle cx="12" cy="12" r="10"/></svg>; 
             }
         };
 
-
-        // Estilos de transição para o efeito "bacana"
         const transitionStyle = { transition: 'all 0.5s ease-in-out', willChange: 'transform, box-shadow' };
 
-        // 2. FUNÇÃO PRINCIPAL
         function ROICalculadora() {
-            // **REVISADO:** Inicialização com valores vazios/zero
             const [formData, setFormData] = useState({
                 investimentoMensal: '',
                 cplMedio: '',
@@ -135,32 +167,26 @@
                 metaMelhoriaROI: '', 
             });
 
-            // **NOVO:** Estado para controlar a visibilidade dos resultados
             const [showResults, setShowResults] = useState(false);
             const errorMessageRef = useRef(null);
 
-            // URL do WhatsApp com número da RedattoLAB
             const WHATSAPP_URL = 'https://wa.me/5548999867086?text=Ol%C3%A1%2C%20calculei%20o%20ROI%20da%20minha%20construtora%20na%20calculadora%20e%20preciso%20de%20ajuda%20para%20otimizar%C3%A1-los.';
             const REDATTOLAB_PHONE = '+55 (48) 99986-7086';
 
-            // Funções de formatação
             const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
             const formatPercent = (value) => { if (isNaN(value) || value === -0) return '0.0%'; return `${value.toFixed(1)}%`; };
             const formatNumber = (value) => value.toFixed(1);
 
-            // Lógica de Cálculo Otimizada e Coerente com o Mercado
             const calculations = useMemo(() => {
                 const {
                     investimentoMensal, cplMedio, leadsGerados, taxaConversao, vendasMensais, ticketMedio,
                     margemConstrucao, metaMelhoriaROI,
                 } = formData;
 
-                // **OTIMIZAÇÃO DE ESTABILIDADE:** Converter para float e usar 0 como fallback
-                // Isso garante que mesmo campos vazios ou com erro de digitação não quebrem o cálculo
                 const parseNum = (value) => parseFloat(String(value).replace(',', '.')) || 0;
                 
                 const iMensal = parseNum(investimentoMensal);
-                const cpl = parseNum(cplMedio) || 1; // Evita divisão por zero
+                const cpl = parseNum(cplMedio) || 1;
                 const leads = parseNum(leadsGerados);
                 const taxaC = parseNum(taxaConversao);
                 const vendas = parseNum(vendasMensais);
@@ -168,34 +194,28 @@
                 const margem = parseNum(margemConstrucao) / 100 || 0.3; 
                 const metaROI = parseNum(metaMelhoriaROI) / 100 || 0.5;
                 
-                // Cálculos PRINCIPAIS
                 const receitaMensal = vendas * ticket;
                 const lucroBrutoMensal = receitaMensal * margem;
                 const lucroRemanescenteMarketing = lucroBrutoMensal - iMensal; 
                 const roiMensal = iMensal > 0 ? (lucroRemanescenteMarketing / iMensal) * 100 : 0;
                 
-                // CPL ideal (2.5% do ticket, com base no seu know-how)
                 const cplIdeal = ticket * 0.025; 
                 const eficienciaCPL = (cplIdeal / cpl) * 100;
                 const potencialReducaoCPL = iMensal * (1 - (cplIdeal / cpl));
                 
-                // Vendas esperadas (baseado na taxa de conversão imputada)
                 const vendidosEsperados = (leads * (taxaC / 100));
                 const eficienciaVendas = vendidosEsperados > 0 ? (vendas / vendidosEsperados) * 100 : 0;
                 const vendasperdidas = Math.max(0, vendidosEsperados - vendas);
                 const receitaPerdida = vendasperdidas * ticket;
 
-                // Projeção 6 meses
                 const investimentoProjetado6m = iMensal * 6;
                 const lucroProjetado6m = lucroRemanescenteMarketing * 6;
                 
-                // Projeção com OTIMIZAÇÃO (Baseada na meta do lead)
                 const roiMeta = roiMensal * (1 + metaROI);
                 const lucroMensalOtimizado = iMensal * (1 + (roiMeta / 100)); 
                 const lucroOtimizado6m = lucroMensalOtimizado * 6;
                 const ganhoOtimizacao = lucroOtimizado6m - lucroProjetado6m;
                 
-                // LÓGICA DE STATUS REVISADA (Compatível com Imobiliário)
                 const getStatus = (valor, minBom, maxRegular, invertido = false) => {
                     let bom = invertido ? valor <= minBom : valor >= minBom;
                     let regular = invertido ? valor >= maxRegular : valor >= maxRegular;
@@ -222,32 +242,26 @@
                     ganhoOtimizacao,
                     roiMeta,
                     
-                    // Aplicação da lógica de status revisada
                     statusROI: getStatus(roiMensal, 200, 100), 
                     statusCPL: getStatus(eficienciaCPL, 100, 90), 
                     statusVendas: getStatus(eficienciaVendas, 90, 75),
                 };
             }, [formData]);
 
-            // **REVISADO:** Tratamento de valores no input
             const handleChange = (e) => {
                 const { name, value } = e.target;
                 
-                // Permite a string vazia no estado para o campo ficar visualmente em branco
                 setFormData(prev => ({
                     ...prev,
                     [name]: value 
                 }));
                 
-                // Oculta os resultados ao começar a editar um campo
                 if (showResults) {
                     setShowResults(false);
                 }
             };
             
-            // **NOVO:** Função para o botão de geração de resultados
             const handleGenerateResults = () => {
-                // Validação: Investimento Mensal precisa ser um número maior que zero
                 const iMensal = parseFloat(formData.investimentoMensal);
                 
                 if (iMensal > 0) {
@@ -256,7 +270,6 @@
                         errorMessageRef.current.classList.remove('visible');
                     }
                 } else {
-                    // Mostra a mensagem de erro
                     if (errorMessageRef.current) {
                         errorMessageRef.current.classList.add('visible');
                     }
@@ -264,8 +277,6 @@
                 }
             };
 
-
-            // Componente Reutilizável de Card (com efeito)
             const KpiCard = ({ title, value, status, description, isCurrency = false, isPercent = false, mainValueColor = status.color }) => (
                 <div 
                     className="kpi-card-hover"
@@ -312,7 +323,6 @@
                 </div>
             );
 
-            // Lógica para o CTA dinâmico
             const getCTAText = () => {
                 const isGoodROI = calculations.roiMensal >= 150; 
 
@@ -343,32 +353,25 @@
                     color: '#ffffff',
                 }}>
                     <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-                        {/* Header */}
                         <div style={{ textAlign: 'center', marginBottom: '50px' }}>
-                            {/* LOGO REDATTOLAB */}
                             <img 
                                 src="https://redattolab.com.br/wp-content/uploads/2025/09/RedattoLAB-400-x-150-px.png" 
                                 alt="RedattoLAB Logo" 
                                 style={{ maxWidth: '300px', height: 'auto', marginBottom: '20px' }} 
                             />
-                            {/* REVISADO: Capitalização */}
                             <h1 style={{ fontFamily: 'Urbanist, sans-serif', fontSize: '42px', fontWeight: 700, color: '#daa520', marginBottom: '10px' }}>
                                 Calculadora de ROI imobiliário
                             </h1>
-                            {/* REVISADO: Capitalização */}
                             <p style={{ color: '#ffffff', fontSize: '16px', opacity: 0.9 }}>
                                 Diagnóstico e projeção estratégica para construtoras e incorporadoras
                             </p>
                         </div>
 
-                        {/* Input Form */}
                         <div style={{ background: '#084d6e', borderRadius: '16px', padding: '30px', marginBottom: '40px', border: '2px solid #daa520', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
-                            {/* REVISADO: Capitalização */}
                             <h2 style={{ fontFamily: 'Urbanist, sans-serif', fontSize: '24px', fontWeight: 600, color: '#daa520', marginBottom: '25px' }}>
                                 Seus dados atuais e metas
                             </h2>
 
-                            {/* APLICANDO O GRID DE 4 COLUNAS E GAP AUMENTADO */}
                             <div className="input-grid-container">
                                 {[
                                     { label: 'Investimento mensal (R$)', name: 'investimentoMensal', type: 'currency' },
@@ -407,7 +410,6 @@
                                 ))}
                             </div>
                             
-                            {/* **NOVO:** BOTÃO GERAR RESULTADOS */}
                             <div style={{ textAlign: 'center', marginTop: '30px' }}>
                                 <button
                                     onClick={handleGenerateResults}
@@ -436,11 +438,9 @@
                             
                         </div>
                         
-                        {/* **NOVO:** SEÇÃO DE RESULTADOS CONDICIONAL */}
                         {showResults && (
                             <React.Fragment>
                                 
-                                {/* KPI Highlights */}
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '25px', marginBottom: '40px' }}>
                                     
                                     <KpiCard
@@ -482,7 +482,6 @@
                                         mainValueColor={calculations.statusVendas.color}
                                     />
                                     
-                                    {/* Lucro Remanescente Card com estilo único */}
                                     <div 
                                         className="main-card-hover"
                                         style={{
@@ -508,7 +507,6 @@
                                     </div>
                                 </div>
 
-                                {/* 6 Month Projection & Optimization */}
                                 <div style={{ background: '#084d6e', borderRadius: '16px', padding: '30px', marginBottom: '40px', border: '2px solid #daa520', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px' }}>
                                         <IconComponent name="Clock" size={28} color="#daa520" />
@@ -521,14 +519,12 @@
                                     </div>
 
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-                                        {/* Cenário Atual */}
                                         <div style={{ ...transitionStyle, background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '24px', border: '1px solid rgba(218, 165, 32, 0.3)' }}>
                                             <p style={{ color: '#ffffff', opacity: 0.8, fontSize: '13px', margin: '0 0 10px 0', fontWeight: 600 }}>Cenário atual (6 meses)</p>
                                             <p style={{ fontSize: '24px', fontWeight: 700, color: '#daa520', margin: '10px 0' }}>{formatCurrency(calculations.lucroProjetado6m)}</p>
                                             <p style={{ color: '#ffffff', opacity: 0.7, fontSize: '12px', margin: 0 }}>Com investimento total de {formatCurrency(calculations.investimentoProjetado6m)}.</p>
                                         </div>
 
-                                        {/* Cenário Otimizado */}
                                         <div style={{ 
                                             ...transitionStyle, 
                                             background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(218, 165, 32, 0.15) 100%)',
@@ -539,7 +535,6 @@
                                             <p style={{ color: '#ffffff', opacity: 0.7, fontSize: '12px', margin: 0 }}>Lucro potencial ao atingir o ROI de {formatPercent(calculations.roiMeta)}.</p>
                                         </div>
 
-                                        {/* Ganho Total */}
                                         <div style={{ ...transitionStyle, background: 'rgba(218, 165, 32, 0.15)', borderRadius: '12px', padding: '24px', border: '2px solid #daa520', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
                                             <p style={{ color: '#daa520', fontSize: '13px', margin: '0 0 10px 0', fontWeight: 700 }}>Ganho adicional em 6 meses</p>
                                             <p style={{ fontSize: '32px', fontWeight: 700, color: '#daa520', margin: '10px 0' }}>
@@ -549,7 +544,6 @@
                                     </div>
                                 </div>
                                 
-                                {/* **INSIGHT ESTRATÉGICO DA REDATTOLAB** */}
                                 <div style={{
                                     background: '#fffbeb', 
                                     borderRadius: '16px',
@@ -576,14 +570,14 @@
                                         </thead>
                                         <tbody>
                                             <tr>
-                                                <td className="bold-label">Meta otimista / agressiva</td>
-                                                <td>100%</td>
-                                                <td>Ideal para empresas que estão atualmente com ROI **baixo (abaixo de 100%)** ou **médio (entre 100%-150%)** e têm grandes perdas de *leads* por funil. Focar em reduzir o CPL em 20% e aumentar a conversão de *leads* em 30% pode facilmente dobrar o ROI em 6 meses.</td>
+                                                <td data-label="Cenário:" className="bold-label">Meta otimista / agressiva</td>
+                                                <td data-label="% de melhoria:">100%</td>
+                                                <td data-label="Justificativa:">Ideal para empresas que estão atualmente com ROI **baixo (abaixo de 100%)** ou **médio (entre 100%-150%)** e têm grandes perdas de leads por funil. Focar em reduzir o CPL em 20% e aumentar a conversão de leads em 30% pode facilmente dobrar o ROI em 6 meses.</td>
                                             </tr>
                                             <tr>
-                                                <td className="bold-label">Meta realista / sólida</td>
-                                                <td>50%</td>
-                                                <td>Adequada para empresas que já possuem um ROI **saudável (acima de 150%)**. Atingir esta meta significa manter a eficiência enquanto se aumenta o volume de investimento e de *leads*, o que é mais desafiador. Foca em ganhos marginais e escalabilidade segura.</td>
+                                                <td data-label="Cenário:" className="bold-label">Meta realista / sólida</td>
+                                                <td data-label="% de melhoria:">50%</td>
+                                                <td data-label="Justificativa:">Adequada para empresas que já possuem um ROI **saudável (acima de 150%)**. Atingir esta meta significa manter a eficiência enquanto se aumenta o volume de investimento e de leads, o que é mais desafiador. Foca em ganhos marginais e escalabilidade segura.</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -591,9 +585,7 @@
                                         *Sua meta de {formatPercent(parseFloat(formData.metaMelhoriaROI) || 0)} está alinhada com as práticas de otimização no setor.*
                                     </p>
                                 </div>
-                                {/* FIM INSIGHT ESTRATÉGICO */}
 
-                                {/* CTA - CALL TO ACTION (REDATTOLAB LEAD MAGNET) */}
                                 <div style={{ 
                                     background: ctaContent.iconColor === '#10b981' ? 'linear-gradient(90deg, #084d6e 50%, #10b981 100%)' : 'linear-gradient(90deg, #084d6e 50%, #ef4444 100%)',
                                     borderRadius: '16px', padding: '40px 30px', marginBottom: '40px', 
@@ -629,9 +621,7 @@
                                         Ou ligue: {REDATTOLAB_PHONE}
                                     </p>
                                 </div>
-                                {/* FIM CTA */}
 
-                                {/* Action Checklist */}
                                 <div style={{ background: '#084d6e', borderRadius: '16px', padding: '30px', border: '2px solid #daa520', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px' }}>
                                         <IconComponent name="Target" size={28} color="#daa520" />
@@ -699,7 +689,6 @@
                                     </div>
                                 </div>
 
-                                {/* Footer Insights */}
                                 <div style={{ marginTop: '40px', textAlign: 'center', color: '#daa520', fontSize: '13px', opacity: 0.9 }}>
                                     <p style={{ fontFamily: 'Urbanist, sans-serif' }}>A estratégia de marketing imobiliário exige foco em CPL ideal (2-3% do ticket) e otimização do funil de vendas (2-5% conversão).</p>
                                 </div>
@@ -710,11 +699,9 @@
             );
         }
         
-        // 3. INICIALIZAÇÃO DO REACT
         const rootElement = document.getElementById("root"); 
         const root = ReactDOM.createRoot(rootElement);
 
-        // Renderiza o componente na tela
         root.render(
             <ROICalculadora />
         );
